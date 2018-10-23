@@ -3,7 +3,7 @@ const rabbitmq   = require('amqplib');
 const config     = require("./config");
 const util       = require('util');
 
-const debug = true;
+const debug = 2;
 
 const client = new Client(config.token, {
     reconnect: true,
@@ -32,20 +32,28 @@ client.on('receive', async (shard, packet) =>
         if(Object.keys(packet.d.user).length > 1)
         {
             packet.t = "USER_UPDATE";
-            packet.d = packet.d.user;
         }
     }
 
-    if(config.ignorePackets.includes(packet.t))
+    if(debug > 0)
     {
-        return;
+        console.log(`[${packet.t}]`);
+        if(debug > 1)
+        {
+            console.log(packet.d);
+        }
     }
 
-    if(debug)
-    {
-        console.log(`[${packet.t}]`)
+	if(config.ignorePackets.includes(packet.t))
+	{
+		if(debug > 0)
+		{
+			console.log("^ ignored");
+		}
+		return;
     }
 
+	
     await gatewayChannel.sendToQueue(config.rabbitChannel, Buffer.from(JSON.stringify(packet)));   
     return;
 });
