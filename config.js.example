@@ -10,4 +10,5 @@ module.exports = {
     shardInit: 1,
     shardCount: 1,
     token: "token-here",
+    logLevel: 2, /* 0 = none, 1 = info, 2 = verbose */
 };

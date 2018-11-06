@@ -3,8 +3,6 @@ const rabbitmq   = require('amqplib');
 const config     = require("./config");
 const util       = require('util');
 
-const debug = 2;
-
 const client = new Client(config.token, {
     reconnect: true,
 });
@@ -35,10 +33,10 @@ client.on('receive', async (shard, packet) =>
         }
     }
 
-    if(debug > 0)
+    if(config.logLevel > 0)
     {
         console.log(`[${packet.t}]`);
-        if(debug > 1)
+        if(config.logLevel > 1)
         {
             console.log(packet.d);
         }
@@ -46,7 +44,7 @@ client.on('receive', async (shard, packet) =>
 
 	if(config.ignorePackets.includes(packet.t))
 	{
-		if(debug > 0)
+		if(config.logLevel > 0)
 		{
 			console.log("^ ignored");
 		}
