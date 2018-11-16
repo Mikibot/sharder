@@ -9,19 +9,16 @@ extern crate serenity;
 extern crate tokio;
 extern crate tungstenite;
 
-use futures::prelude::{async, await};
 use futures::Future;
-use lapin::channel::{
-    BasicProperties, BasicPublishOptions, ConfirmSelectOptions, ExchangeDeclareOptions,
-    QueueBindOptions, QueueDeclareOptions,
-};
-use lapin::client::ConnectionOptions;
+use futures::prelude::{async, await};
 use lapin::types::FieldTable;
+use lapin::client::ConnectionOptions;
+use lapin::channel::{BasicPublishOptions,BasicProperties,ConfirmSelectOptions,ExchangeDeclareOptions,QueueBindOptions,QueueDeclareOptions};
 use serde_json::Error as JsonError;
+use serenity::Error as SerenityError;
 use serenity::gateway::Shard;
 use serenity::model::event::Event;
 use serenity::model::event::GatewayEvent;
-use serenity::Error as SerenityError;
 use std::env;
 use std::env::VarError;
 use std::io::Error as IOError;
@@ -78,12 +75,11 @@ fn main() {
 }
 
 #[async]
-fn main_async() -> Result<(), Error> {
-    let addr = std::env::var("AMQP_ADDR")
-        .unwrap_or_else(|_| "127.0.0.1:5672".to_string())
-        .parse()
-        .unwrap();
-    let token = Rc::new(env::var("DISCORD_TOKEN").expect("Expected `DISCORD_TOKEN` in the environment"));
+fn main_async() -> Result<(), Error>
+{
+    let addr = std::env::var("AMQP_ADDR").unwrap_or_else(|_| "127.0.0.1:5672".to_string()).parse().unwrap();
+    let token = Rc::new(env::var("DISCORD_TOKEN")
+        .expect("Expected a token in the environment"));
 
     let password = std::env::var("AMQP_PASS")?;
     let username = std::env::var("AMQP_USER")?;
@@ -91,25 +87,18 @@ fn main_async() -> Result<(), Error> {
     let exchange = std::env::var("AMQP_EXCHANGE")?;
     let queue = std::env::var("AMQP_QUEUE")?;
 
-    let shardcount = std::env::var("DISCORD_SHARD_COUNT")?
-        .parse::<u64>()
-        .expect("Expected `DISCORD_SHARD_COUNT` in the environment");
-    let shardindex = std::env::var("DISCORD_SHARD_INDEX")?
-        .parse::<u64>()
-        .expect("Expected `DISCORD_SHARD_INDEX` in the environment");
+    let shardcount = std::env::var("DISCORD_SHARD_COUNT")?.parse::<u64>().ok().expect("rip");
+    let shardindex = std::env::var("DISCORD_SHARD_INDEX")?.parse::<u64>().ok().expect("rip");
 
     let stream = await!(TcpStream::connect(&addr))?;
-    let (client, heartbeat) = await!(lapin::client::Client::connect(
-        stream,
-        ConnectionOptions {
-            username,
-            password,
-            frame_max: 65535,
-            ..Default::default()
-        }
-    ))?;
+    let (client, heartbeat) = await!(lapin::client::Client::connect(stream, ConnectionOptions {
+        username: username,
+        password: password,
+        frame_max: 65535,
+        ..Default::default()
+    }))?;
 
-    current_thread::spawn(heartbeat.map_err(|e| eprintln!("{:?}", e)));
+     current_thread::spawn(heartbeat.map_err(|e| eprintln!("{:?}", e)));
 
     let channel = await!(client.create_confirm_channel(ConfirmSelectOptions::default()))?;
     let id = channel.id;
@@ -118,35 +107,28 @@ fn main_async() -> Result<(), Error> {
     await!(channel.queue_declare(&queue, QueueDeclareOptions::default(), FieldTable::new()))?;
     println!("channel {} declared queue {}", id, "queue");
 
-    await!(channel.exchange_declare(
-        &exchange,
-        "direct",
-        ExchangeDeclareOptions::default(),
-        FieldTable::new()
-    ))?;
-    await!(channel.queue_bind(
-        &queue,
-        &exchange,
-        "*",
-        QueueBindOptions::default(),
-        FieldTable::new()
-    ))?;
+    await!(channel.exchange_declare(&exchange, "direct", ExchangeDeclareOptions::default(), FieldTable::new()))?;
+    await!(channel.queue_bind(&queue, &exchange, "*", QueueBindOptions::default(), FieldTable::new()))?;
     let mut shard = await!(Shard::new(Rc::clone(&token), [shardindex, shardcount]))?;
 
-    loop {
-        let result: Result<_, Error> = do catch {
+    loop 
+    {
+        let result: Result<_, Error> = do catch 
+        {
             #[async]
-            for message in shard.messages() {
+            for message in shard.messages() 
+            {      
                 let msg = message.clone();
 
-                let mut bytes = match message {
+                let mut bytes = match message 
+                {
                     TungsteniteMessage::Binary(v) => v,
                     TungsteniteMessage::Text(v) => v.into_bytes(),
                     _ => continue,
                 };
 
-                let event = shard.parse(msg)?;
-
+                let event = shard.parse(msg).unwrap();
+                
                 let ev_type = match event.clone() {
                     GatewayEvent::Dispatch(_, t) => Some(t),
                     _ => None,
@@ -156,41 +138,46 @@ fn main_async() -> Result<(), Error> {
                     await!(future)?;
                 }
 
-                if ev_type.is_none() {
+                if ev_type.is_none()
+                {
                     println!("ignored event");
                     continue;
                 }
-
-                await!(
-                    channel.basic_publish(
-                        &exchange,
-                        &queue,
-                        bytes.clone(),
-                        BasicPublishOptions::default(),
-                        BasicProperties::default()
-                            .with_user_id("guest".to_string())
-                            .with_reply_to("foobar".to_string())
-                    )
-                )?;
-
+                
+                await!(channel.basic_publish(
+                    &exchange,
+                    &queue,
+                    bytes.clone(),
+                    BasicPublishOptions::default(),
+                    BasicProperties::default().with_user_id("guest".to_string()).with_reply_to("foobar".to_string())
+                ));
+            
                 println!("message processed!");
             }
-
+            
             ()
         };
 
-        if let Err(why) = result {
+        if let Err(why) = result 
+        {
             println!("Error with loop occurred: {:?}", why);
 
-            match why {
-                Error::Tungstenite(TungsteniteError::ConnectionClosed(Some(close))) => {
-                    println!("Close: code: {}; reason: {}", close.code, close.reason,);
-                }
-                other => {
+            match why 
+            {
+                Error::Tungstenite(TungsteniteError::ConnectionClosed(Some(close))) => 
+                {
+                    println!(
+                        "Close: code: {}; reason: {}",
+                        close.code,
+                        close.reason,
+                    );
+                },
+                other => 
+                {
                     println!("Shard error: {:?}", other);
 
                     continue;
-                }
+                },
             }
 
             await!(shard.autoreconnect())?;
