@@ -27,6 +27,11 @@ client.on('receive', async (packet, shard) =>
         return;
     }
 
+    if(packet.t == "READY")
+    {
+        console.log(`[ OK ] >> SHARD READY: ${shard.id}`);
+    }
+
     if(packet.t == "PRESENCE_UPDATE")
     {
         if(Object.keys(packet.d.user).length > 1)
@@ -147,4 +152,7 @@ for(var i = config.shardIndex; i < config.shardIndex + config.shardInit; i++)
 }
 
 main();
+
+console.log(`[ .. ] >> intiating shards: ${shardsToInit}`);
+
 client.spawn(shardsToInit);
