@@ -1,11 +1,9 @@
-const { Client } = require('@spectacles/gateway');
+const { Cluster } = require('@spectacles/gateway');
 const rabbitmq   = require('amqplib');
 const config     = require("./config");
 const util       = require('util');
 
-const client = new Client(config.token, {
-    reconnect: true,
-});
+const client = new Cluster(config.token);
 
 client.gateway = {
     url: "wss://gateway.discord.gg/",
@@ -18,8 +16,14 @@ var gatewayChannel = null;
 
 var commandChannel = null;
 
-client.on('receive', async (shard, packet) => 
+client.on('error', async (error) => {
+    console.error(error);
+})
+
+client.on('receive', async (packet, shard) => 
 {
+    console.log(packet);
+
     if(packet.op != 0)
     {
         return;
@@ -29,7 +33,7 @@ client.on('receive', async (shard, packet) =>
     {
         if(Object.keys(packet.d.user).length > 1)
         {
-            packet.t = "USER_UPDATE";
+            packet.t = "USER_UPDATE";``
         }
     }
 
