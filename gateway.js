@@ -22,8 +22,6 @@ client.on('error', async (error) => {
 
 client.on('receive', async (packet, shard) => 
 {
-    console.log(packet);
-
     if(packet.op != 0)
     {
         return;
@@ -33,7 +31,7 @@ client.on('receive', async (packet, shard) =>
     {
         if(Object.keys(packet.d.user).length > 1)
         {
-            packet.t = "USER_UPDATE";``
+            packet.t = "USER_UPDATE";
         }
     }
 
