@@ -22,14 +22,6 @@ client.on('error', (error) => {
     console.error(error);
 })
 
-client.on('connect', (shard) => {
-    console.log(`[ OK ] >> SHARD ${shard} CONNECTED`);
-});
-
-client.on('disconnect', (shard) => {
-    console.log(`[ ERR] >> SHARD ${shard} DISCONNECTED`);
-});
-
 client.on('receive', async (packet, shard) => 
 {
     if(packet.op != 0)
@@ -67,7 +59,6 @@ client.on('receive', async (packet, shard) =>
 		}
 		return;
     }
-
 	
     await gatewayChannel.sendToQueue(config.rabbitChannel, Buffer.from(JSON.stringify(packet)));   
     return;
