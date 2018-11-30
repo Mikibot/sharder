@@ -1,9 +1,9 @@
-const { Client } = require('@spectacles/gateway');
+const { Cluster } = require('@spectacles/gateway');
 const rabbitmq   = require('amqplib');
 const config     = require("./config");
 const util       = require('util');
 
-const client = new Client(config.token, {
+const client = new Cluster(config.token, {
     reconnect: true
 });
 
