@@ -19,7 +19,7 @@ var gatewayChannel = null;
 var commandChannel = null;
 
 client.on('error', (error) => {
-    console.error(error);
+    console.error("[ ERR} >> " + error);
 })
 
 client.on('receive', async (packet, shard) => 
