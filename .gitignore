@@ -1,3 +1,5 @@
 node_modules/
+_build/
+deps/
 config*.js
 *.config.js
