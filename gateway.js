@@ -98,9 +98,9 @@ async function initConnection()
 
             console.log(JSON.stringify(packet));
 
-            if(client.connections.has(packet.shard_id))
+            if(client.shards.has(packet.shard_id))
             {
-                let shard = client.connections.get(packet.shard_id);
+                let shard = client.shards.get(packet.shard_id);
                 await shard.send(packet.opcode, packet.data);   
             }
         }, {noAck: true});
