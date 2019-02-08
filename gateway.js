@@ -96,11 +96,11 @@ async function main()
     discord.spawn(shardsToInit);
 }
 
-async function initConnection(exchangeName)
+async function initConnection()
 {
     try
     {
-        let newConn = await rabbitmq.connect(config.rabbitUrl);
+        let newConn = await rabbitmq.connect(config.rabbit.url);
 
         newConn.on('error', async (err) => {
             console.log("[CRIT] CN " + err);
