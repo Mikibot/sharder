@@ -69,6 +69,10 @@ async function main()
     conn = await getConnection();
 
     gatewayChannel = await createPushChannel(config.rabbitChannel);
+        
+    console.log(`[ .. ] >> intiating shards: ${shardsToInit}`);
+
+    client.spawn(shardsToInit);
 }
 
 async function initConnection()
@@ -87,9 +91,9 @@ async function initConnection()
         conn = newConn;
 
         commandChannel = await conn.createChannel();
-        await commandChannel.assertExchange(config.rabbitExchange + "-command", 'fanout', {durable: false});
+        await commandChannel.assertExchange(config.rabbitExchange + "-command", 'fanout', {durable: true});
 
-        await commandChannel.assertQueue("gateway-command")
+        await commandChannel.assertQueue("gateway-command", {durable: false});
         await commandChannel.consume("gateway-command", async (msg) => {
 
             console.log("message receieved");
@@ -134,8 +138,8 @@ async function getConnection()
 
         if(conn == null)
         {
-            console.log("[WARN] >> connection failed, retrying..")
-            setTimeout(() => {}, 1000);
+            console.log("[WARN] >> connection failed, retrying in 5 seconds..")
+            setTimeout(() => {}, 5000);
             continue;
         }
 
@@ -153,7 +157,3 @@ for(var i = config.shardIndex; i < config.shardIndex + config.shardInit; i++)
 }
 
 main();
-
-console.log(`[ .. ] >> intiating shards: ${shardsToInit}`);
-
-client.spawn(shardsToInit);
