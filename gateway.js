@@ -87,7 +87,7 @@ async function initConnection()
         conn = newConn;
 
         commandChannel = await conn.createChannel();
-        await commandChannel.assertExchange(config.rabbitExchange + "-command", 'fanout', {durable: true});
+        await commandChannel.assertExchange(config.rabbitExchange + "-command", 'fanout', {durable: false});
 
         await commandChannel.assertQueue("gateway-command")
         await commandChannel.consume("gateway-command", async (msg) => {
