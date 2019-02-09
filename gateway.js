@@ -1,4 +1,4 @@
-const { Cluster } = require('@spectacles/gateway');
+const { Cluster, Gateway } = require('@spectacles/gateway');
 const rabbitmq    = require('amqplib');
 const redis       = require('redis');
 const config      = require("./config");
@@ -6,17 +6,10 @@ const Promise     = require("bluebird");
 
 Promise.promisifyAll(redis);
 
-const discord = new Cluster(config.token, {
-    reconnect: true
-});
+const gateway = new Gateway(config.token, config.shardCount);
+const discord = new Cluster(gateway);
 
 const cache = new redis.createClient(config.redis.url);
-
-
-discord.gateway = {
-    url: "wss://gateway.discord.gg/",
-    shards: config.shardCount,
-};
 
 var conn = null;
 var gatewayChannel = null;
