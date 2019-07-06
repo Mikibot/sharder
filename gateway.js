@@ -13,7 +13,6 @@ const cache = new redis.createClient(process.env.REDIS_URL);
 
 var conn = null;
 var gatewayChannel = null;
-var commandChannel = null;
 
 discord.on('error', (error) => {
     console.error("[ ERR} >> " + error);
@@ -74,14 +73,16 @@ async function main()
 {   
     conn = await getConnection();
     gatewayChannel = await createPushChannel(
-        process.env.RABBIT_PUSH_EX, 
-        process.env.RABBIT_PUSH_CN);
-    commandChannel = await createCommandChannel(
-        process.env.RABBIT_CMD_EX, 
-        process.env.RABBIT_CMD_CN);
+        process.env.RABBIT_PUSH_EX || "gateway", 
+        process.env.RABBIT_PUSH_CN || "gateway");
+    await createCommandChannel(
+        process.env.RABBIT_CMD_EX || "gateway", 
+        process.env.RABBIT_CMD_CN || "gateway");
 
     let shardsToInit = [];
-    for(let i = process.env.SHARD_START; i < process.env.SHARD_START + process.env.SHARD_COUNT; i++)
+    for(let i = process.env.SHARD_START || 0; 
+        i < process.env.SHARD_START || 1 + process.env.SHARD_COUNT || 1; 
+        i++)
     {
         shardsToInit.push(i);
     }
@@ -115,20 +116,23 @@ async function initConnection()
 async function createPushChannel(exchangeName, channelName)
 {
     var channel = await conn.createChannel();
-     
     channel.on('error', function(err) {
         console.log("[CRIT] CH " + err);
     });
     
-    await channel.assertExchange(exchangeName, 'direct', {durable: true});
-    assert = await channel.assertQueue(channelName, {durable: true});
+    await channel.assertExchange(
+        exchangeName || "gateway", 
+        'direct', 
+        {durable: true});
+    assert = await channel.assertQueue(
+        channelName || "gateway", 
+        {durable: true});
     return channel;
 }
 
 async function createCommandChannel(exchangeName, channelName)
 {
     let channel = await conn.createChannel();
-
     await channel.assertExchange(exchangeName, 'fanout', {durable: true});
     await channel.assertQueue(channelName, {durable: false});
     await channel.bindQueue(channelName, exchangeName, '');
