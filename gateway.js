@@ -76,8 +76,8 @@ async function main()
         process.env.RABBIT_PUSH_EX || "gateway", 
         process.env.RABBIT_PUSH_CN || "gateway");
     await createCommandChannel(
-        process.env.RABBIT_CMD_EX || "gateway", 
-        process.env.RABBIT_CMD_CN || "gateway");
+        process.env.RABBIT_CMD_EX || "gateway:command", 
+        process.env.RABBIT_CMD_CN || "gateway:command");
 
     let shardsToInit = [];
     for(let i = process.env.SHARD_START || 0; 
