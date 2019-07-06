@@ -29,7 +29,7 @@ discord.on('disconnect', async (shard) => {
     await cache.hsetAsync("gateway:shards", shard.id, "0");
 });
 
-let ignoredPacketIDs = process.env.IGNORE_PACKETS.split(',');
+let ignoredPacketIDs = (process.env.IGNORE_PACKETS || "").split(',');
 discord.on('receive', async (packet, shard) => 
 {
     if(packet.op != 0)
