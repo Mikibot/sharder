@@ -6,11 +6,13 @@ require("dotenv").config();
 
 Promise.promisifyAll(redis);
 
-if(process.env.DISCORD_TOKEN == null) {
+if((process.env.DISCORD_TOKEN || "") == "") {
     throw new Error("Cannot start sharder without valid token.");
 }
 
-const gateway = new Gateway(process.env.DISCORD_TOKEN, process.env.SHARD_TOTAL);
+const gateway = new Gateway(
+    process.env.DISCORD_TOKEN, 
+    Number(process.env.SHARD_COUNT));
 const discord = new Cluster(gateway);
 
 const cache = new redis.createClient(process.env.REDIS_URL);
@@ -19,18 +21,22 @@ var conn = null;
 var gatewayChannel = null;
 
 discord.on('error', (error) => {
-    console.error("[ ERR} >> " + error);
+    console.error(" err : " + error);
 })
 
 discord.on('connect', async (shard) => {
-    console.log("[ OK ]: Connected shard " + shard.id);
+    console.log("  ok : Connected shard " + shard.id);
     await cache.hsetAsync("gateway:shards", shard.id, "1");
 });
 
 discord.on('disconnect', async (shard) => {
-    console.log("[ERR ]: Disconnected shard " + shard.id);
+    console.log(" err : Disconnected shard " + shard.id);
     await cache.hsetAsync("gateway:shards", shard.id, "0");
 });
+
+discord.on('close', (event) => {
+    console.log(" err : websocket closed with reason: " + event.reason);
+})
 
 let ignoredPacketIDs = (process.env.IGNORE_PACKETS || "").split(',');
 discord.on('receive', async (packet, shard) => 
@@ -84,16 +90,17 @@ async function main()
         process.env.RABBIT_CMD_CN || "gateway:command");
 
     let shardsToInit = [];
-    for(let i = process.env.SHARD_START || 0; 
-        i < process.env.SHARD_START || 1 + process.env.SHARD_COUNT || 1; 
-        i++)
+    let shardIndex = (process.env.SHARD_INDEX || 0);
+    let initAmount = (process.env.SHARD_INIT || 1);
+
+    for(let i = shardIndex; i < shardIndex + initAmount; i++)
     {
-        shardsToInit.push(i);
+        shardsToInit.push(Number(i));
     }
 
-    console.log(`[ .. ] >> intiating shards: ${shardsToInit}`);
+    console.log(`  .. : intiating shards: ${shardsToInit}`);
 
-    discord.spawn(shardsToInit);
+    await discord.spawn(shardsToInit);
 }
 
 async function initConnection()
@@ -121,7 +128,7 @@ async function createPushChannel(exchangeName, channelName)
 {
     var channel = await conn.createChannel();
     channel.on('error', function(err) {
-        console.log("[CRIT] CH " + err);
+        console.log(" CRIT: CH " + err);
     });
     
     await channel.assertExchange(
