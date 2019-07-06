@@ -19,6 +19,7 @@
     "@spectacles/types": "^0.2.0",
     "amqplib": "^0.5.2",
     "bluebird": "^3.5.3",
+    "dotenv": "^8.0.0",
     "redis": "^2.8.0"
   }
 }

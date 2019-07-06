@@ -1,15 +1,15 @@
 const { Cluster, Gateway } = require('@spectacles/gateway');
 const rabbitmq    = require('amqplib');
 const redis       = require('redis');
-const config      = require("./config");
 const Promise     = require("bluebird");
+require("dotenv").config();
 
 Promise.promisifyAll(redis);
 
-const gateway = new Gateway(config.token, config.shardCount);
+const gateway = new Gateway(process.env.DISCORD_TOKEN, process.env.SHARD_TOTAL);
 const discord = new Cluster(gateway);
 
-const cache = new redis.createClient(config.redis.url);
+const cache = new redis.createClient(process.env.REDIS_URL);
 
 var conn = null;
 var gatewayChannel = null;
@@ -26,10 +26,10 @@ discord.on('connect', async (shard) => {
 
 discord.on('disconnect', async (shard) => {
     console.log("[ERR ]: Disconnected shard " + shard.id);
-
     await cache.hsetAsync("gateway:shards", shard.id, "0");
 });
 
+let ignoredPacketIDs = process.env.IGNORE_PACKETS.split(',');
 discord.on('receive', async (packet, shard) => 
 {
     if(packet.op != 0)
@@ -50,36 +50,38 @@ discord.on('receive', async (packet, shard) =>
         }
     }
 
-    if(config.logLevel > 0)
+    if(process.env.LOG_LEVEL > 0)
     {
         console.log(`[${packet.t}]`);
-        if(config.logLevel > 1)
+        if(process.env.LOG_LEVEL > 1)
         {
             console.log(packet.d);
         }
     }
 
-	if(config.ignorePackets.includes(packet.t))
+	if(ignoredPacketIDs.includes(packet.t))
 	{
-		if(config.logLevel > 0)
-		{
-			console.log("^ ignored");
-		}
 		return;
     }
 	
-    await gatewayChannel.sendToQueue(config.rabbit.pusher.channelName, Buffer.from(JSON.stringify(packet)));   
+    await gatewayChannel.sendToQueue(
+        process.env.RABBIT_PUSH_CN,
+        Buffer.from(JSON.stringify(packet)));
     return;
 });
 
 async function main()
 {   
     conn = await getConnection();
-    gatewayChannel = await createPushChannel(config.rabbit.pusher.exchangeName, config.rabbit.pusher.channelName);
-    commandChannel = await createCommandChannel(config.rabbit.commands.exchangeName, config.rabbit.commands.channelName)
+    gatewayChannel = await createPushChannel(
+        process.env.RABBIT_PUSH_EX, 
+        process.env.RABBIT_PUSH_CN);
+    commandChannel = await createCommandChannel(
+        process.env.RABBIT_CMD_EX, 
+        process.env.RABBIT_CMD_CN);
 
     let shardsToInit = [];
-    for(let i = config.shardIndex; i < config.shardIndex + config.shardInit; i++)
+    for(let i = process.env.SHARD_START; i < process.env.SHARD_START + process.env.SHARD_COUNT; i++)
     {
         shardsToInit.push(i);
     }
@@ -93,7 +95,8 @@ async function initConnection()
 {
     try
     {
-        let newConn = await rabbitmq.connect(config.rabbit.url);
+        let newConn = await rabbitmq.connect(
+            process.env.RABBIT_URL);
 
         newConn.on('error', async (err) => {
             console.log("[CRIT] CN " + err);
