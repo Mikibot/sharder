@@ -6,6 +6,10 @@ require("dotenv").config();
 
 Promise.promisifyAll(redis);
 
+if(process.env.DISCORD_TOKEN == null) {
+    throw new Error("Cannot start sharder without valid token.");
+}
+
 const gateway = new Gateway(process.env.DISCORD_TOKEN, process.env.SHARD_TOTAL);
 const discord = new Cluster(gateway);
 
