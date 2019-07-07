@@ -1,3 +1,3 @@
-> This repository has been archived due to a newer rewritten version being distributed. Please go to http://github.com/mikibot/retsu
+> This repository is being rewritten and will soon be archived; check out http://github.com/mikibot/retsu for future use.
 # sharder
 An application for a zero-downtime Discord bot.
