@@ -1,0 +1,8 @@
+version: '3'
+services:
+  sharder:
+    image: "veld/sharder"
+    build: .
+    command: node gateway
+    env_file: .env
+    network_mode: "host"
